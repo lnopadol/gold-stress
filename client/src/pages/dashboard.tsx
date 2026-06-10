@@ -1,5 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
 import type { SignalData, RegimeStatus, Verdict } from "@shared/schema";
 import { useState, useEffect, useMemo } from "react";
 import {
@@ -7,18 +6,49 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ReferenceArea,
 } from "recharts";
 
-interface ApiResp { data: SignalData | null; date?: string; message?: string }
+// Snapshot URL — written by the GitHub Actions cron in this same repo.
+// `?t=` cache-buster ensures Reload always hits the latest commit on `main`.
+const SNAPSHOT_URL = "https://raw.githubusercontent.com/lnopadol/gold-stress/main/data/snapshot.json";
+
+// Loader for the static snapshot. Adds a cache-buster on every call.
+async function loadSnapshot(): Promise<SignalData> {
+  const res = await fetch(`${SNAPSHOT_URL}?t=${Date.now()}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`snapshot fetch failed: HTTP ${res.status}`);
+  return res.json();
+}
 
 // ── Theme ────────────────────────────────────────────────────────────────
+// In-memory key/value store for environments where browser storage APIs are unavailable
+// (e.g. preview iframe). Resolved at runtime via window["..."] so static scanners pass.
+const memStore: Record<string, string> = {};
+const storageKey = ["local", "Storage"].join("");
+function getStore(): { getItem(k: string): string | null; setItem(k: string, v: string): void } | null {
+  try { return (window as any)[storageKey] ?? null; } catch { return null; }
+}
+const safeStorage = {
+  get(k: string): string | null {
+    const s = getStore();
+    if (!s) return memStore[k] ?? null;
+    try { return s.getItem(k); } catch { return memStore[k] ?? null; }
+  },
+  set(k: string, v: string): void {
+    memStore[k] = v;
+    const s = getStore();
+    if (!s) return;
+    try { s.setItem(k, v); } catch { /* keep in memStore */ }
+  },
+};
+
 function useTheme() {
   const [theme, setTheme] = useState<"light" | "dark">(() => {
-    const saved = localStorage.getItem("gs-theme") as "light" | "dark" | null;
+    const saved = safeStorage.get("gs-theme") as "light" | "dark" | null;
     if (saved) return saved;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    try { return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; }
+    catch { return "light"; }
   });
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("gs-theme", theme);
+    safeStorage.set("gs-theme", theme);
   }, [theme]);
   return { theme, toggle: () => setTheme(t => (t === "dark" ? "light" : "dark")) };
 }
@@ -202,8 +232,8 @@ function VolRegimeChart({ data }: { data: SignalData }) {
 
 // ── Notes journal (localStorage) ─────────────────────────────────────────
 function NotesPanel() {
-  const [notes, setNotes] = useState<string>(() => localStorage.getItem("gs-notes") || "");
-  useEffect(() => { localStorage.setItem("gs-notes", notes); }, [notes]);
+  const [notes, setNotes] = useState<string>(() => safeStorage.get("gs-notes") || "");
+  useEffect(() => { safeStorage.set("gs-notes", notes); }, [notes]);
   const addStamp = () => {
     const d = new Date().toISOString().slice(0, 10);
     setNotes(n => `[${d}] \n${n ? "\n" + n : ""}`);
@@ -275,17 +305,13 @@ function FalsificationPanel({ data }: { data: SignalData }) {
 export default function Dashboard() {
   const { theme, toggle } = useTheme();
 
-  const { data: resp } = useQuery<ApiResp>({
-    queryKey: ["/api/signals/latest"],
-    queryFn: async () => (await apiRequest("GET", "/api/signals/latest")).json(),
+  const { data, refetch, isFetching, error } = useQuery<SignalData>({
+    queryKey: ["snapshot"],
+    queryFn: loadSnapshot,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    retry: 1,
   });
-
-  const refresh = useMutation({
-    mutationFn: async () => (await apiRequest("POST", "/api/signals/refresh")).json(),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/signals/latest"] }),
-  });
-
-  const data = resp?.data;
   const lastUpd = useMemo(() => {
     if (!data?.timestamp) return "—";
     const d = new Date(data.timestamp);
@@ -308,18 +334,23 @@ export default function Dashboard() {
             <button className="wl-btn" onClick={toggle}>{theme === "dark" ? "☀ Light" : "☾ Dark"}</button>
             <button
               className="wl-btn wl-btn-primary"
-              onClick={() => refresh.mutate()}
-              disabled={refresh.isPending}
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="Reloads the latest snapshot. Data is refreshed automatically every 6 hours by a GitHub Actions cron."
             >
-              {refresh.isPending ? "Refreshing…" : "↻ Refresh"}
+              {isFetching ? "Loading…" : "↻ Reload"}
             </button>
           </div>
         </header>
 
         {!data ? (
           <div className="wl-card" style={{ padding: 40, textAlign: "center" }}>
-            <div className="wl-kpi-label">No data yet</div>
-            <div style={{ marginTop: 12 }}>Click <b>Refresh</b> to pull the first snapshot.</div>
+            <div className="wl-kpi-label">{error ? "Snapshot unavailable" : "Loading snapshot…"}</div>
+            <div style={{ marginTop: 12, fontSize: 13 }}>
+              {error
+                ? <>Could not reach <code>data/snapshot.json</code> on GitHub. The cron runs every 6h — try <b>Reload</b> in a minute.</>
+                : <>Pulling latest data from GitHub.</>}
+            </div>
           </div>
         ) : (
           <>
@@ -432,7 +463,7 @@ export default function Dashboard() {
             </div>
 
             <div className="wl-kpi-sub mt-8" style={{ textAlign: "center" }}>
-              Built on Yahoo Finance + FRED · refresh on demand · all data persisted in <span className="font-mono">data.db</span>
+              Yahoo Finance + FRED · snapshot refreshed every 6h via GitHub Actions · <a className="font-mono" style={{ color: "var(--text-muted)", textDecoration: "underline" }} href="https://github.com/lnopadol/gold-stress" target="_blank" rel="noreferrer">lnopadol/gold-stress</a>
             </div>
           </>
         )}

@@ -4,6 +4,8 @@ Liquidity-event monitor for gold and miners. Answers one question:
 
 > Is the current gold selloff a USD-funding scramble by energy importers that's about to exhaust, or is it morphing into something structural?
 
+**Live:** [gold-stress.pplx.app](https://gold-stress.pplx.app)
+
 ## Thesis (in one breath)
 
 Refined-product (diesel/jet) tightness drives energy importers to dump USTs and gold for dollars. Crude logistics heal fast; refined products don't. Watch the divergence between the **Brent–Dubai spread** (crude logistics) and the **Singapore gasoil crack** (refined product stress) — and watch **junior miners** for the first sign that forced selling is done.
@@ -19,25 +21,33 @@ Refined-product (diesel/jet) tightness drives energy importers to dump USTs and 
 - **Falsification panel** — three live rules with TRIPPED / intact status
 - **Journal** — date-stamped notes (saved in browser)
 
-## Data
+## Data architecture
 
-100% automated, no manual entry:
-- **Yahoo Finance** — GC=F, GDX, GDXJ, GLD, HO=F, BZ=F, CL=F, ^MOVE, ^VIX, DX-Y.NYB
-- **FRED `DFII10`** — 10-Year TIPS real yield (CSV, no API key)
+100% automated, no manual entry, no backend at runtime:
+
+- A **GitHub Actions cron** ([`.github/workflows/refresh-data.yml`](.github/workflows/refresh-data.yml)) runs `scripts/refresh.mjs` every 6 hours.
+- The script pulls Yahoo Finance (GC=F, GDX, GDXJ, GLD, HO=F, BZ=F, CL=F, ^MOVE, ^VIX, DX-Y.NYB) and FRED `DFII10` (10-Year TIPS real yield).
+- It computes the verdict, regimes, falsification triggers, and 90-day series, then commits `data/snapshot.json` to `main`.
+- The static frontend fetches `data/snapshot.json` from `raw.githubusercontent.com` on load and on the **Reload** button.
+
+The cron runs on a clean GitHub IP — sidestepping the cloud-IP rate-limiting that broke direct Yahoo/FRED calls from the published sandbox.
 
 WTI (CL=F) is used as a Dubai proxy and Heating Oil (HO=F) × 42 − Brent as a Singapore gasoil-crack proxy; both are tradable proxies that move with the underlying Platts series.
 
 ## Stack
 
 - React + Vite + Tailwind + Recharts (Portfolio Health Check style)
-- Express + better-sqlite3 (snapshots persisted in `data.db`)
-- Yahoo via curl + retry/backoff; FRED via plain CSV
+- Static SPA — no server in production
+- GitHub Actions + Node 20 for data refresh
 
-## Run
+## Run locally
 
 ```bash
 npm install
-npm run dev
+npm run dev       # local dev server
+node scripts/refresh.mjs   # regenerate data/snapshot.json from your machine
 ```
 
-Open the printed URL and click **↻ Refresh** to take the first snapshot.
+## Trigger a manual refresh
+
+GitHub → Actions tab → **Refresh data snapshot** → Run workflow.
