@@ -3,7 +3,7 @@ import type { SignalData, RegimeStatus, Verdict } from "@shared/schema";
 import { useState, useEffect, useMemo } from "react";
 import {
   ResponsiveContainer, ComposedChart, Line, Area, AreaChart,
-  XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ReferenceArea,
+  XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ReferenceArea, Legend,
 } from "recharts";
 
 // Snapshot URL — written by the GitHub Actions cron in this same repo.
@@ -168,7 +168,7 @@ function DivergenceChart({ data }: { data: SignalData }) {
     gasoilCrack: data.series.gasoilCrack[i],
   }));
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <ResponsiveContainer width="100%" height={280}>
       <ComposedChart data={rows} margin={{ top: 10, right: 50, bottom: 0, left: 0 }}>
         <CartesianGrid stroke={c.border} strokeDasharray="3 3" vertical={false} />
         <XAxis dataKey="date" stroke={c.text} fontSize={11} tickLine={false} interval="preserveStartEnd" minTickGap={40} />
@@ -178,8 +178,9 @@ function DivergenceChart({ data }: { data: SignalData }) {
           contentStyle={{ background: "var(--surface)", border: `1px solid ${c.border}`, borderRadius: 8, fontSize: 12 }}
           labelStyle={{ color: "var(--text-muted)" }}
         />
-        <Line yAxisId="left" type="monotone" dataKey="brentDubai" stroke={c.blue} strokeWidth={2} dot={false} name="Brent–WTI ($/bbl)" />
-        <Line yAxisId="right" type="monotone" dataKey="gasoilCrack" stroke={c.amber} strokeWidth={2} dot={false} name="Gasoil Crack ($/bbl)" />
+        <Legend verticalAlign="top" height={28} iconType="plainline" wrapperStyle={{ fontSize: 12, color: "var(--text-muted)" }} />
+        <Line yAxisId="left" type="monotone" dataKey="brentDubai" stroke={c.blue} strokeWidth={2} dot={false} name="Brent–WTI spread, $/bbl (left)" />
+        <Line yAxisId="right" type="monotone" dataKey="gasoilCrack" stroke={c.amber} strokeWidth={2} dot={false} name="Gasoil crack, $/bbl (right)" />
       </ComposedChart>
     </ResponsiveContainer>
   );
@@ -193,15 +194,16 @@ function MinersVsStressChart({ data }: { data: SignalData }) {
     gasoilCrack: data.series.gasoilCrack[i],
   }));
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <ResponsiveContainer width="100%" height={280}>
       <ComposedChart data={rows} margin={{ top: 10, right: 50, bottom: 0, left: 0 }}>
         <CartesianGrid stroke={c.border} strokeDasharray="3 3" vertical={false} />
         <XAxis dataKey="date" stroke={c.text} fontSize={11} tickLine={false} interval="preserveStartEnd" minTickGap={40} />
         <YAxis yAxisId="left" stroke={c.text} fontSize={11} tickLine={false} axisLine={false} domain={["auto", "auto"]} />
         <YAxis yAxisId="right" orientation="right" stroke={c.text} fontSize={11} tickLine={false} axisLine={false} />
         <RTooltip contentStyle={{ background: "var(--surface)", border: `1px solid ${c.border}`, borderRadius: 8, fontSize: 12 }} />
-        <Line yAxisId="left" type="monotone" dataKey="juniorRatio" stroke={c.gold} strokeWidth={2} dot={false} name="GDXJ/GDX ratio" />
-        <Line yAxisId="right" type="monotone" dataKey="gasoilCrack" stroke={c.amber} strokeWidth={2} dot={false} name="Gasoil Crack" />
+        <Legend verticalAlign="top" height={28} iconType="plainline" wrapperStyle={{ fontSize: 12, color: "var(--text-muted)" }} />
+        <Line yAxisId="left" type="monotone" dataKey="juniorRatio" stroke={c.gold} strokeWidth={2} dot={false} name="GDXJ/GDX ratio (left)" />
+        <Line yAxisId="right" type="monotone" dataKey="gasoilCrack" stroke={c.amber} strokeWidth={2} dot={false} name="Gasoil crack, $/bbl (right)" />
       </ComposedChart>
     </ResponsiveContainer>
   );
@@ -215,16 +217,17 @@ function VolRegimeChart({ data }: { data: SignalData }) {
     vix: data.series.vix[i],
   }));
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <ResponsiveContainer width="100%" height={280}>
       <ComposedChart data={rows} margin={{ top: 10, right: 50, bottom: 0, left: 0 }}>
         <CartesianGrid stroke={c.border} strokeDasharray="3 3" vertical={false} />
         <XAxis dataKey="date" stroke={c.text} fontSize={11} tickLine={false} interval="preserveStartEnd" minTickGap={40} />
         <YAxis yAxisId="left" stroke={c.text} fontSize={11} tickLine={false} axisLine={false} />
         <YAxis yAxisId="right" orientation="right" stroke={c.text} fontSize={11} tickLine={false} axisLine={false} />
         <RTooltip contentStyle={{ background: "var(--surface)", border: `1px solid ${c.border}`, borderRadius: 8, fontSize: 12 }} />
+        <Legend verticalAlign="top" height={28} iconType="plainline" wrapperStyle={{ fontSize: 12, color: "var(--text-muted)" }} />
         <ReferenceArea yAxisId="right" y1={25} y2={100} fill={c.red} fillOpacity={0.05} />
-        <Line yAxisId="left" type="monotone" dataKey="move" stroke={c.blue} strokeWidth={2} dot={false} name="MOVE (rates vol)" />
-        <Line yAxisId="right" type="monotone" dataKey="vix" stroke={c.red} strokeWidth={2} dot={false} name="VIX (equity vol)" />
+        <Line yAxisId="left" type="monotone" dataKey="move" stroke={c.blue} strokeWidth={2} dot={false} name="MOVE — rates vol (left)" />
+        <Line yAxisId="right" type="monotone" dataKey="vix" stroke={c.red} strokeWidth={2} dot={false} name="VIX — equity vol (right)" />
       </ComposedChart>
     </ResponsiveContainer>
   );
