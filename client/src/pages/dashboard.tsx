@@ -171,7 +171,7 @@ function DivergenceChart({ data }: { data: SignalData }) {
     <ResponsiveContainer width="100%" height={260}>
       <ComposedChart data={rows} margin={{ top: 10, right: 50, bottom: 0, left: 0 }}>
         <CartesianGrid stroke={c.border} strokeDasharray="3 3" vertical={false} />
-        <XAxis dataKey="date" stroke={c.text} fontSize={11} tickLine={false} />
+        <XAxis dataKey="date" stroke={c.text} fontSize={11} tickLine={false} interval="preserveStartEnd" minTickGap={40} />
         <YAxis yAxisId="left" stroke={c.text} fontSize={11} tickLine={false} axisLine={false} />
         <YAxis yAxisId="right" orientation="right" stroke={c.text} fontSize={11} tickLine={false} axisLine={false} />
         <RTooltip
@@ -196,7 +196,7 @@ function MinersVsStressChart({ data }: { data: SignalData }) {
     <ResponsiveContainer width="100%" height={260}>
       <ComposedChart data={rows} margin={{ top: 10, right: 50, bottom: 0, left: 0 }}>
         <CartesianGrid stroke={c.border} strokeDasharray="3 3" vertical={false} />
-        <XAxis dataKey="date" stroke={c.text} fontSize={11} tickLine={false} />
+        <XAxis dataKey="date" stroke={c.text} fontSize={11} tickLine={false} interval="preserveStartEnd" minTickGap={40} />
         <YAxis yAxisId="left" stroke={c.text} fontSize={11} tickLine={false} axisLine={false} domain={["auto", "auto"]} />
         <YAxis yAxisId="right" orientation="right" stroke={c.text} fontSize={11} tickLine={false} axisLine={false} />
         <RTooltip contentStyle={{ background: "var(--surface)", border: `1px solid ${c.border}`, borderRadius: 8, fontSize: 12 }} />
@@ -218,7 +218,7 @@ function VolRegimeChart({ data }: { data: SignalData }) {
     <ResponsiveContainer width="100%" height={260}>
       <ComposedChart data={rows} margin={{ top: 10, right: 50, bottom: 0, left: 0 }}>
         <CartesianGrid stroke={c.border} strokeDasharray="3 3" vertical={false} />
-        <XAxis dataKey="date" stroke={c.text} fontSize={11} tickLine={false} />
+        <XAxis dataKey="date" stroke={c.text} fontSize={11} tickLine={false} interval="preserveStartEnd" minTickGap={40} />
         <YAxis yAxisId="left" stroke={c.text} fontSize={11} tickLine={false} axisLine={false} />
         <YAxis yAxisId="right" orientation="right" stroke={c.text} fontSize={11} tickLine={false} axisLine={false} />
         <RTooltip contentStyle={{ background: "var(--surface)", border: `1px solid ${c.border}`, borderRadius: 8, fontSize: 12 }} />
