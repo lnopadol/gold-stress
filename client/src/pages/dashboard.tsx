@@ -98,8 +98,10 @@ function Delta({ value, suffix = "%", d = 2 }: { value: number; suffix?: string;
   return <span className={`${cls} font-mono`}>{value > 0 ? "+" : ""}{value.toFixed(d)}{suffix}</span>;
 }
 
-function Kpi({ label, value, sub, tone }: {
-  label: string; value: string; sub?: React.ReactNode; tone?: "green" | "amber" | "red" | "neutral"
+function Kpi({ label, value, sub, tone, note }: {
+  label: string; value: string; sub?: React.ReactNode;
+  tone?: "green" | "amber" | "red" | "neutral";
+  note?: React.ReactNode;
 }) {
   const toneCls = tone === "green" ? "verdict-green" : tone === "red" ? "verdict-red"
     : tone === "amber" ? "verdict-amber" : "";
@@ -108,6 +110,17 @@ function Kpi({ label, value, sub, tone }: {
       <div className="wl-kpi-label">{label}</div>
       <div className={`wl-kpi-num ${toneCls}`}>{value}</div>
       {sub && <div className="wl-kpi-sub">{sub}</div>}
+      {note && (
+        <div
+          className="font-mono"
+          style={{
+            marginTop: 8, paddingTop: 8, borderTop: "1px dashed var(--border)",
+            fontSize: 10.5, lineHeight: 1.4, color: "var(--text-muted)", opacity: 0.85,
+          }}
+        >
+          {note}
+        </div>
+      )}
     </div>
   );
 }
@@ -123,7 +136,7 @@ function Pill({ children, kind = "neutral" }: {
   return <span className={`wl-pill ${m[kind]}`}>{children}</span>;
 }
 
-function RegimeBadge({ label, status }: { label: string; status: RegimeStatus }) {
+function RegimeBadge({ label, status, note }: { label: string; status: RegimeStatus; note?: React.ReactNode }) {
   return (
     <div className="wl-card" style={{ padding: "14px 18px" }}>
       <div className="wl-kpi-label">{label}</div>
@@ -131,6 +144,17 @@ function RegimeBadge({ label, status }: { label: string; status: RegimeStatus })
         <span className={`inline-block w-2.5 h-2.5 rounded-full ${regimeDot[status]}`} />
         <span className={`wl-pill ${regimeColor[status]}`}>{regimeLabel[status]}</span>
       </div>
+      {note && (
+        <div
+          className="font-mono"
+          style={{
+            marginTop: 10, paddingTop: 8, borderTop: "1px dashed var(--border)",
+            fontSize: 10.5, lineHeight: 1.4, color: "var(--text-muted)", opacity: 0.85,
+          }}
+        >
+          {note}
+        </div>
+      )}
     </div>
   );
 }
@@ -368,9 +392,21 @@ export default function Dashboard() {
 
             {/* Regime badges */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
-              <RegimeBadge label="Crude stress (Brent–WTI proxy)" status={data.regimes.crude} />
-              <RegimeBadge label="Refined product stress (gasoil crack)" status={data.regimes.product} />
-              <RegimeBadge label="Liquidity regime (MOVE vs VIX)" status={data.regimes.liquidity} />
+              <RegimeBadge
+                label="Crude stress (Brent–WTI proxy)"
+                status={data.regimes.crude}
+                note={<>Normal ≤ 75th pct · Elevated 75–90th · Crisis &gt; 90th (vs 90d)</>}
+              />
+              <RegimeBadge
+                label="Refined product stress (gasoil crack)"
+                status={data.regimes.product}
+                note={<>Normal ≤ 70th pct · Elevated 70–90th · Crisis &gt; 90th (vs 90d)</>}
+              />
+              <RegimeBadge
+                label="Liquidity regime (MOVE vs VIX)"
+                status={data.regimes.liquidity}
+                note={<>Normal: MOVE &lt; 110 · Elevated: MOVE ≥ 110 &amp; VIX &lt; 20 · Crisis: VIX ≥ 25 &amp; MOVE ≥ 110</>}
+              />
             </div>
 
             {/* KPI grid */}
@@ -381,45 +417,53 @@ export default function Dashboard() {
                 sub={<>
                   <Delta value={data.gold.change7d} /> 7d · vs $4,000 <Delta value={data.gold.pctFromRef4000} />
                 </>}
+                note={<>Reference: $4,000. A flush below $4k that holds &gt; 3 sessions → check real-yield rule.</>}
               />
               <Kpi
                 label="Fair value gap"
                 value={fmtPct(data.gold.fairValueGapPct, 1)}
                 sub={<>Fair ≈ {fmtUsd(data.gold.fairValue)} @ real yield {fmt(data.realYield10y, 2)}%</>}
                 tone={Math.abs(data.gold.fairValueGapPct) < 5 ? "red" : "neutral"}
+                note={<>&gt; 50%: strong structural bid · 20–50%: compressing · &lt; 5%: falsification trips.</>}
               />
               <Kpi
                 label="GDXJ / GDX ratio"
                 value={fmt(data.miners.juniorRatio, 3)}
                 sub={<>20d MA {fmt(data.miners.juniorRatioMa20, 3)} · momentum <Delta value={data.miners.juniorMomentum} /></>}
                 tone={data.miners.juniorMomentum > 0 ? "green" : "amber"}
+                note={<>Healthy: ratio &gt; 20d MA AND momentum &gt; 0. Watch the trend, not the level.</>}
               />
               <Kpi
                 label="Juniors leadership"
                 value={data.miners.leading ? "Leading" : "Lagging"}
                 sub={<>GDXJ 7d <Delta value={data.miners.gdxjChange7d} /> · GDX 7d <Delta value={data.miners.gdxChange7d} /></>}
                 tone={data.miners.leading ? "green" : "amber"}
+                note={<>Leading = on a down-gold day, GDXJ beats both GDX and gold. 3 of 5 sessions → size up.</>}
               />
               <Kpi
                 label="Brent – WTI (Dubai proxy)"
                 value={`$${fmt(data.crude.brentDubaiSpread, 2)}`}
                 sub={<>Brent {fmtUsd(data.crude.brent, 2)} · WTI {fmtUsd(data.crude.wti, 2)}</>}
+                note={<>Normal $2–5 · Elevated $5–8 · Crisis &gt; $8 (physical crude tight).</>}
               />
               <Kpi
                 label="Gasoil crack"
                 value={`$${fmt(data.product.gasoilCrack, 1)}/bbl`}
                 sub={<>7d <Delta value={data.product.crackChange7d} /> · 30d <Delta value={data.product.crackChange30d} /> {data.product.backwardation ? "· backwardated" : ""}</>}
                 tone={data.regimes.product === "crisis" ? "red" : data.regimes.product === "elevated" ? "amber" : "green"}
+                note={<>Avg ≈ $20 · $25–35 stress · $35–50 severe · &gt; $50 crisis. Watch 30d Δ.</>}
               />
               <Kpi
                 label="MOVE / VIX"
                 value={`${fmt(data.vol.move, 1)} / ${fmt(data.vol.vix, 1)}`}
                 sub={<>Ratio {fmt(data.vol.moveVixRatio, 2)} · MOVE {data.vol.movePercentile}</>}
+                note={<>VIX 25 = hard line. Ratio &gt; 5: pure funding story · &lt; 2: recession story.</>}
               />
               <Kpi
                 label="Gold / Oil"
                 value={fmt(data.liquidity.goldOilRatio, 1)}
                 sub={<>30d <Delta value={data.liquidity.goldOilChange30d} /> · DXY {fmt(data.liquidity.dxy, 2)}</>}
+                note={<>Long-term avg ≈ 20 · 30–40 late-cycle · &gt; 45 monetary regime. Contextual.</>}
               />
             </div>
 
